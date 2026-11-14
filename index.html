@@ -88,6 +88,17 @@
       color: var(--accent);
     }
 
+    .panel h3 {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .panel p {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
     .controls {
       display: flex;
       gap: 10px;
@@ -264,8 +275,19 @@
     </div>
 
     <div style="margin-top: 12px;">
-      <label style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 6px;">File Types</label>
-      <select id="file-types" multiple style="height: 120px;">
+      <label style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 6px;">Scan Backend</label>
+      <select id="scan-backend" style="width: 100%;">
+        <option value="file">Computer Files (local)</option>
+        <option value="firecrawl">Web Sites (Firecrawl)</option>
+      </select>
+    </div>
+
+    <div id="firecrawl-config" style="display: none; margin-top: 12px;">
+      <label style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 6px;">Search Query (Firecrawl)</label>
+      <input type="text" id="firecrawl-query" value="open source web scraping tools 2026" style="width: 100%;">
+      <p style="font-size: 0.75rem; color: var(--muted);">Searches the web for sources, then scrapes each page into clean markdown.</p>
+    </div>
+
         <option value=".txt">Text Files (.txt)</option>
         <option value=".md">Markdown (.md)</option>
         <option value=".csv">Spreadsheets (.csv)</option>
@@ -291,6 +313,13 @@
     </div>
   </div>
 
+  <div class="panel" id="firecrawl-results-panel" style="display: none;">
+    <h2>Web Results (Firecrawl)</h2>
+    <div id="firecrawl-results">
+      <div class="empty-state">No Firecrawl results yet.</div>
+    </div>
+  </div>
+
   <div class="panel">
     <h2>Extracted Tasks</h2>
     <div style="max-height: 200px; overflow-y: auto; background: var(--bg); border-radius: 6px; border: 1px solid var(--border);" id="tasks-list">
@@ -311,26 +340,51 @@
     const tasksList = document.getElementById('tasks-list');
     const pathInput = document.getElementById('path-input');
     const fileTypesSelect = document.getElementById('file-types');
+    const scanBackendSelect = document.getElementById('scan-backend');
+    const firecrawlConfig = document.getElementById('firecrawl-config');
+    const firecrawlQuery = document.getElementById('firecrawl-query');
 
     let scanResults = null;
+
+    // Switch backend
+    scanBackendSelect.addEventListener('change', () => {
+      const isFirecrawl = scanBackendSelect.value === 'firecrawl';
+      firecrawlConfig.style.display = isFirecrawl ? 'block' : 'none';
+      if (!isFirecrawl) {
+        document.getElementById('firecrawl-results-panel').style.display = 'none';
+      }
+    });
 
     btnScan.addEventListener('click', async () => {
       btnScan.disabled = true;
       btnScan.innerHTML = '<span class="loading-spinner"></span>Scanning...';
 
       try {
-        const fileTypeValues = Array.from(fileTypesSelect.selectedOptions)
-          .map(opt => opt.value);
+        const backend = scanBackendSelect.value;
 
-        const result = await PluginAPI.invoke('anlistic_pro_scan_request', {
-          paths: pathInput.value.split(',').map(p => p.trim()).filter(Boolean),
-          fileTypes: fileTypeValues,
-          recursive: true,
-          maxDepth: 10
-        });
+        if (backend === 'firecrawl') {
+          const query = firecrawlQuery.value || 'web scraping tools';
+          const result = await PluginAPI.invoke('anlistic_pro_firecrawl_scan', { query: query });
+          if (result.success) {
+            renderFirecrawlResults(result);
+            document.getElementById('firecrawl-results-panel').style.display = 'block';
+          } else {
+            showError(result.error);
+          }
+        } else {
+          const fileTypeValues = Array.from(fileTypesSelect.selectedOptions)
+            .map(opt => opt.value);
 
-        scanResults = result;
-        renderResults(result);
+          const result = await PluginAPI.invoke('anlistic_pro_scan_request', {
+            paths: pathInput.value.split(',').map(p => p.trim()).filter(Boolean),
+            fileTypes: fileTypeValues,
+            recursive: true,
+            maxDepth: 10
+          });
+
+          scanResults = result;
+          renderResults(result);
+        }
       } catch (err) {
         showError(err.message);
       } finally {
@@ -393,6 +447,46 @@
       }
       tasksList.innerHTML = '';
       tasksList.appendChild(taskContainer);
+    }
+
+    // Render Firecrawl web search results
+    function renderFirecrawlResults(result) {
+      const container = document.getElementById('firecrawl-results');
+      container.innerHTML = '';
+
+      if (result.results && result.results.length > 0) {
+        for (const r of result.results) {
+          const item = document.createElement('div');
+          item.style.padding = '8px 14px';
+          item.style.borderBottom = '1px solid var(--border)';
+          item.style.fontSize = '0.9rem';
+
+          if (r.url) {
+            const link = document.createElement('a');
+            link.href = r.url;
+            link.target = '_blank';
+            link.style.color = 'var(--accent)';
+            link.style.textDecoration = 'none';
+            link.textContent = r.title || r.url;
+            item.appendChild(link);
+          } else {
+            const textSpan = document.createElement('span');
+            textSpan.style.color = 'var(--text)';
+            textSpan.textContent = r.text || r.title;
+            item.appendChild(textSpan);
+          }
+
+          const typeSpan = document.createElement('span');
+          typeSpan.style.color = 'var(--muted)';
+          typeSpan.style.fontSize = '0.75rem';
+          typeSpan.textContent = '[' + (r.type || 'web') + ']';
+          item.appendChild(typeSpan);
+
+          container.appendChild(item);
+        }
+      } else {
+        container.innerHTML = '<div class="empty-state">No web results found.</div>';
+      }
     }
 
     function updateStats(scanned, files, tasks, duration) {

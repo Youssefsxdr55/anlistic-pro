@@ -30,6 +30,41 @@ PluginAPI.on('anlistic_pro_scan_request', async (params) => {
   };
 });
 
+// Firecrawl web scanning backend (Path A: Live Web Tools)
+// Uses the Firecrawl CLI (npx firecrawl-cli) for web search/scrape
+PluginAPI.on('anlistic_pro_firecrawl_scan', async (params) => {
+  const { query, limit } = params || {};
+  const searchQuery = query || 'open source web scraping tools';
+
+  try {
+    // Use Firecrawl CLI to search the web
+    const { execFileSync } = require('child_process');
+    const output = execFileSync(
+      'firecrawl',
+      ['search', `"${searchQuery}"`, '--limit', limit || '20'],
+      { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] }
+    );
+
+    // Parse the Firecrawl output into structured results
+    const results = parseFirecrawlOutput(output);
+    return {
+      success: true,
+      backend: 'firecrawl',
+      query: searchQuery,
+      results: results,
+      total: results.length,
+      credits: 1
+    };
+  } catch (err) {
+    return {
+      success: false,
+      backend: 'firecrawl',
+      query: searchQuery,
+      error: err.message || 'Firecrawl search failed'
+    };
+  }
+});
+
 // Listen for single file scan
 PluginAPI.on('anlistic_pro_scan_file', async (filePath) => {
   try {
@@ -51,8 +86,60 @@ PluginAPI.on('anlistic_pro_scan_file', async (filePath) => {
   }
 });
 
-// Export for module use
-window.AnlisticScanner = AnlisticScanner;
+// Helper: parse Firecrawl CLI search output into structured results
+function parseFirecrawlOutput(output) {
+  const results = [];
+  const lines = output.split(/\r?\n/);
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Firecrawl returns markdown with links like [Title](URL)
+    const linkMatch = trimmed.match(/^\[([^\]]+)\]\(([^)]+)\)/);
+    if (linkMatch) {
+      results.push({
+        title: linkMatch[1],
+        url: linkMatch[2],
+        type: 'web-search'
+      });
+      continue;
+    }
+
+    // Bare URLs
+    const urlMatch = trimmed.match(/https?:\/\/[^\s<]+/);
+    if (urlMatch && !results.some(r => r.url === urlMatch[0])) {
+      results.push({
+        title: urlMatch[0],
+        url: urlMatch[0],
+        type: 'web-search'
+      });
+      continue;
+    }
+
+    // Headings and content
+    if (trimmed.startsWith('#') || trimmed.startsWith('##')) {
+      results.push({
+        text: trimmed,
+        type: 'web-page'
+      });
+      continue;
+    }
+
+    // Skip ads, navigation, boilerplate
+    if (/advertisement|sponsored|cookie|privacy|terms/i.test(trimmed)) continue;
+
+    // Other content as generic result
+    if (trimmed.length > 10) {
+      results.push({
+        text: trimmed.slice(0, 200),
+        type: 'web-content'
+      });
+    }
+  }
+
+  return results;
+}
 
 /**
  * Scans specified paths for files and extracts productivity data

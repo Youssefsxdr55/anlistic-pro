@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anlistic Pro</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --surface: #16213e;
+      --accent: #e94560;
+      --text: #eee;
+      --muted: #888;
+      --border: #2a2a4a;
+      --progress-bg: #2a2a4a;
+      --progress-fill: #e94560;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h1 .logo {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--accent);
+      margin-top: 4px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .panel h2 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .controls button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex: 1;
+      min-width: 100px;
+    }
+
+    .controls .btn-scan {
+      background: var(--accent);
+      color: white;
+    }
+
+    .controls .btn-scan:hover { background: #c73652; }
+
+    .controls .btn-clear {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .controls .btn-clear:hover { background: #3a3a5a; }
+
+    .path-input {
+      flex: 2;
+      min-width: 200px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .file-list {
+      max-height: 400px;
+      overflow-y: auto;
+      background: var(--bg);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .file-item {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.15s;
+    }
+
+    .file-item:hover { background: #2a2a4a; }
+
+    .file-item:last-child { border-bottom: none; }
+
+    .file-name {
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .file-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .file-task-count {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: var(--accent);
+      background: rgba(233, 69, 96, 0.2);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-text {
+      color: #ff6b6b;
+      font-size: 0.9rem;
+      padding: 8px 0;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--progress-bg);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--progress-fill);
+      transition: width 0.3s;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <h1><span class="logo">A</span>Anlistic Pro</h1>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Scanned</div>
+      <div class="stat-value" id="stat-scanned">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Files Found</div>
+      <div class="stat-value" id="stat-files">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tasks Extracted</div>
+      <div class="stat-value" id="stat-tasks">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Duration</div>
+      <div class="stat-value" id="stat-duration">0ms</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Scan Configuration</h2>
+    <div class="controls">
+      <button class="btn-scan" id="btn-scan">Scan All Computers</button>
+      <button class="btn-clear" id="btn-clear">Clear Results</button>
+    </div>
+
+    <div style="margin-top: 12px;">
+      <label style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 6px;">Default Paths</label>
+      <input type="text" id="path-input" class="path-input" value="C:\Users\LENOVO, D:\Data" readonly>
+    </div>
+
+    <div style="margin-top: 12px;">
+      <label style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 6px;">File Types</label>
+      <select id="file-types" multiple style="height: 120px;">
+        <option value=".txt">Text Files (.txt)</option>
+        <option value=".md">Markdown (.md)</option>
+        <option value=".csv">Spreadsheets (.csv)</option>
+        <option value=".pdf">PDF Files (.pdf)</option>
+        <option value=".doc">Word (.doc)</option>
+        <option value=".docx">Word (.docx)</option>
+        <option value=".log">Log Files (.log)</option>
+        <option value=".json">Config (.json)</option>
+        <option value=".xml">XML (.xml)</option>
+        <option value=".py">Python (.py)</option>
+        <option value=".js">JavaScript (.js)</option>
+        <option value=".ts">TypeScript (.ts)</option>
+        <option value=".java">Java (.java)</option>
+        <option value=".cpp">C++ (.cpp)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Scanned Files</h2>
+    <div class="file-list" id="file-list">
+      <div class="empty-state">No scan results yet. Click "Scan All Computers" to start.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Extracted Tasks</h2>
+    <div style="max-height: 200px; overflow-y: auto; background: var(--bg); border-radius: 6px; border: 1px solid var(--border);" id="tasks-list">
+      <div class="empty-state">No tasks extracted yet.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Anlistic Pro v1.0.0 &mdash; Super Productivity Plugin
+  </div>
+
+  <script src="plugin.js"></script>
+  <script>
+    // UI Logic
+    const btnScan = document.getElementById('btn-scan');
+    const btnClear = document.getElementById('btn-clear');
+    const fileList = document.getElementById('file-list');
+    const tasksList = document.getElementById('tasks-list');
+    const pathInput = document.getElementById('path-input');
+    const fileTypesSelect = document.getElementById('file-types');
+
+    let scanResults = null;
+
+    btnScan.addEventListener('click', async () => {
+      btnScan.disabled = true;
+      btnScan.innerHTML = '<span class="loading-spinner"></span>Scanning...';
+
+      try {
+        const fileTypeValues = Array.from(fileTypesSelect.selectedOptions)
+          .map(opt => opt.value);
+
+        const result = await PluginAPI.invoke('anlistic_pro_scan_request', {
+          paths: pathInput.value.split(',').map(p => p.trim()).filter(Boolean),
+          fileTypes: fileTypeValues,
+          recursive: true,
+          maxDepth: 10
+        });
+
+        scanResults = result;
+        renderResults(result);
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        btnScan.disabled = false;
+        btnScan.innerHTML = 'Scan All Computers';
+      }
+    });
+
+    btnClear.addEventListener('click', () => {
+      scanResults = null;
+      fileList.innerHTML = '<div class="empty-state">No scan results yet.</div>';
+      tasksList.innerHTML = '<div class="empty-state">No tasks extracted yet.</div>';
+      updateStats(0, 0, 0, 0);
+    });
+
+    function renderResults(result) {
+      updateStats(result.scanned, result.files.length, result.tasks.length, result.duration);
+
+      const fileContainer = document.createElement('div');
+      if (result.files.length === 0) {
+        fileContainer.innerHTML = '<div class="empty-state">No matching files found.</div>';
+      } else {
+        for (const f of result.files) {
+          const item = document.createElement('div');
+          item.className = 'file-item';
+          const fileName = document.createElement('span');
+          fileName.className = 'file-name';
+          fileName.textContent = (f.path.split('\\').pop() || f.path);
+          const fileMeta = document.createElement('span');
+          fileMeta.className = 'file-meta';
+          fileMeta.textContent = f.size + ' bytes · ' + f.ext + ' · ' + f.taskCount + ' tasks';
+          item.appendChild(fileName);
+          item.appendChild(fileMeta);
+          fileContainer.appendChild(item);
+        }
+      }
+      fileList.innerHTML = '';
+      fileList.appendChild(fileContainer);
+
+      const taskContainer = document.createElement('div');
+      if (result.tasks.length === 0) {
+        taskContainer.innerHTML = '<div class="empty-state">No tasks extracted.</div>';
+      } else {
+        for (const t of result.tasks) {
+          const item = document.createElement('div');
+          item.style.padding = '6px 14px';
+          item.style.borderBottom = '1px solid var(--border)';
+          item.style.fontSize = '0.85rem';
+          const typeSpan = document.createElement('span');
+          typeSpan.style.color = 'var(--muted)';
+          typeSpan.style.fontSize = '0.75rem';
+          typeSpan.textContent = '[' + t.type.toUpperCase() + ']';
+          const textSpan = document.createElement('span');
+          textSpan.style.color = 'var(--text)';
+          textSpan.textContent = t.text;
+          item.appendChild(typeSpan);
+          item.appendChild(textSpan);
+          taskContainer.appendChild(item);
+        }
+      }
+      tasksList.innerHTML = '';
+      tasksList.appendChild(taskContainer);
+    }
+
+    function updateStats(scanned, files, tasks, duration) {
+      document.getElementById('stat-scanned').textContent = scanned;
+      document.getElementById('stat-files').textContent = files;
+      document.getElementById('stat-tasks').textContent = tasks;
+      document.getElementById('stat-duration').textContent = duration + 'ms';
+    }
+
+    function showError(msg) {
+      fileList.innerHTML = '<div class="error-text">Error: ' + escapeHtml(msg) + '</div>';
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

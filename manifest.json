@@ -1,0 +1,9 @@
+{
+  "name": "Anlistic Pro",
+  "id": "anlistic-pro",
+  "version": "1.0.0",
+  "description": "Scans all computer files for productivity tracking and task extraction from files",
+  "author": "Youssef Ahmed",
+  "permissions": ["tasks", "projects", "tags", "settings", "files"],
+  "apiVersion": 1
+}
